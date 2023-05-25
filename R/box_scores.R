@@ -154,7 +154,7 @@
             df_stats <-
               df_stats %>%
               left_join(df_base) %>%
-              select(one_of(names(df_base)), everything()) %>%
+              dplyr::select(one_of(names(df_base)), everything()) %>%
               suppressMessages() %>%
               rename(slugPositionStarter = slugPosition)
 
@@ -172,7 +172,7 @@
       all_data <-
         all_data %>%
         left_join(df_base) %>%
-        select(one_of(names(df_base)), everything()) %>%
+        dplyr::select(one_of(names(df_base)), everything()) %>%
         suppressMessages()
 
       data <-
@@ -183,8 +183,8 @@
                typeBoxScore = boxscore) %>%
         mutate(cols = dataBoxScore %>% map_dbl(ncol)) %>%
         filter(cols > 1) %>%
-        select(-cols) %>%
-        select(typeBoxScore, typeResult, everything())
+        dplyr::select(-cols) %>%
+        dplyr::select(typeBoxScore, typeResult, everything())
       return(data)
     }
 
@@ -294,12 +294,12 @@
         data %>%
         left_join(
           df_team %>% unite(nameTeam, nameCityTeam, teamName, sep = " ") %>%
-            select(idTeam, nameTeam, slugTeam, locationGame)
+            dplyr::select(idTeam, nameTeam, slugTeam, locationGame)
         ) %>%
-        select(-one_of(c(
+        dplyr::select(-one_of(c(
           "typeBoxScore", "typeDataSet", "orderBoxScore"
         ))) %>%
-        select(idGame, slugTeam, nameTeam, locationGame, everything()) %>%
+        dplyr::select(idGame, slugTeam, nameTeam, locationGame, everything()) %>%
         mutate(isStarter = !is.na(groupPosition)) %>%
         suppressMessages()
 
@@ -322,8 +322,8 @@
              typeBoxScore = boxscore) %>%
       mutate(cols = dataBoxScore %>% map_dbl(ncol)) %>%
       filter(cols > 1) %>%
-      select(-cols) %>%
-      select(typeBoxScore, typeResult, everything())
+      dplyr::select(-cols) %>%
+      dplyr::select(typeBoxScore, typeResult, everything())
     gc()
     closeAllConnections()
     data
@@ -432,21 +432,21 @@ box_scores <-
               data <-
                 df_results %>%
                 filter(typeBoxScore == table) %>%
-                select(idGame, dataBoxScore) %>%
+                dplyr::select(idGame, dataBoxScore) %>%
                 unnest()
 
 
               if (table_slug == "usage") {
                 data <-
                   data %>%
-                  dplyr::select(-one_of("pctUSG"))
+                  dplyr::dplyr::select(-one_of("pctUSG"))
               }
 
               if (table_slug %in% c("tracking", "defense", "hustle")) {
 
                 data <-
                   data %>%
-                  dplyr::select(-one_of(
+                  dplyr::dplyr::select(-one_of(
                     c(
                       "pctFG",
                       "groupStartPosition",
@@ -464,7 +464,7 @@ box_scores <-
               if (table_slug == "four factors") {
                 data <-
                   data %>%
-                  dplyr::select(-one_of(c(
+                  dplyr::dplyr::select(-one_of(c(
                     "pctOREB", "pctTOVTeam", "pctEFG"
                   )))
               }
@@ -481,7 +481,7 @@ box_scores <-
             all_tables <-
               all_tables %>%
               mutate(isStarter = ifelse(is.na(groupStartPosition), F, T)) %>%
-              dplyr::select(idGame:groupStartPosition, isStarter, everything())
+              dplyr::dplyr::select(idGame:groupStartPosition, isStarter, everything())
           }
           tibble(typeResult = result,
                      dataBoxScore = list(all_tables))
@@ -495,14 +495,14 @@ box_scores <-
             df_table <-
               all_data %>%
               filter(typeResult == result) %>%
-              select(-typeResult) %>%
+              dplyr::select(-typeResult) %>%
               unnest()
 
             if (df_table %>% has_name("groupStartPosition")) {
               df_table <-
                 df_table %>%
                 mutate(isStarter = ifelse(is.na(groupStartPosition), F, T)) %>%
-                dplyr::select(idGame:groupStartPosition, isStarter, everything())
+                dplyr::dplyr::select(idGame:groupStartPosition, isStarter, everything())
             }
 
             assign(x = table_name,
@@ -520,7 +520,7 @@ box_scores <-
             df_tables <-
               all_data %>%
               filter(typeResult == result) %>%
-              select(-typeResult)
+              dplyr::select(-typeResult)
             data <-
               df_tables$typeBoxScore %>%
               unique() %>%
@@ -529,7 +529,7 @@ box_scores <-
                   df_tables %>%
                   filter(typeBoxScore == type) %>%
                   unnest(.drop = T) %>%
-                  select(-typeBoxScore)
+                  dplyr::select(-typeBoxScore)
                 type_slug <-
                   type %>% str_split("\\ ") %>% flatten_chr() %>%
                   str_to_title() %>% str_c(collapse = "")
