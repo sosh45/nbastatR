@@ -439,14 +439,14 @@ box_scores <-
               if (table_slug == "usage") {
                 data <-
                   data %>%
-                  dplyr::dplyr::select(-one_of("pctUSG"))
+                  dplyr::select(-one_of("pctUSG"))
               }
 
               if (table_slug %in% c("tracking", "defense", "hustle")) {
 
                 data <-
                   data %>%
-                  dplyr::dplyr::select(-one_of(
+                  dplyr::select(-one_of(
                     c(
                       "pctFG",
                       "groupStartPosition",
@@ -464,7 +464,7 @@ box_scores <-
               if (table_slug == "four factors") {
                 data <-
                   data %>%
-                  dplyr::dplyr::select(-one_of(c(
+                  dplyr::select(-one_of(c(
                     "pctOREB", "pctTOVTeam", "pctEFG"
                   )))
               }
@@ -481,7 +481,7 @@ box_scores <-
             all_tables <-
               all_tables %>%
               mutate(isStarter = ifelse(is.na(groupStartPosition), F, T)) %>%
-              dplyr::dplyr::select(idGame:groupStartPosition, isStarter, everything())
+              dplyr::select(idGame:groupStartPosition, isStarter, everything())
           }
           tibble(typeResult = result,
                      dataBoxScore = list(all_tables))
@@ -502,7 +502,7 @@ box_scores <-
               df_table <-
                 df_table %>%
                 mutate(isStarter = ifelse(is.na(groupStartPosition), F, T)) %>%
-                dplyr::dplyr::select(idGame:groupStartPosition, isStarter, everything())
+                dplyr::select(idGame:groupStartPosition, isStarter, everything())
             }
 
             assign(x = table_name,
