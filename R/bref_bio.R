@@ -67,7 +67,7 @@
   function(page, css = "#div_all_salaries table") {
     table <-
       page %>%
-      html_nodes(css = css) %>%
+      html_elements(css = css) %>%
       html_table()
 
     if (table %>% length() == 0) {
@@ -85,8 +85,8 @@
       return(invisible())
     }
 
-    table %>%
-      flatten_df() %>%
+    table[[1]] %>%
+      as_tibble() %>%
       set_names(c("slugSeason", "nameTeam", "slugLeague", "amountSalary")) %>%
       filter(!slugSeason %>% str_detect("Career")) %>%
       mutate(amountSalary = parse_number(as.character(amountSalary)))
@@ -94,7 +94,7 @@
 
 .parse.contracts  <-
   function(page) {
-    ids <- page %>% html_nodes('div') %>% html_attr('id')
+    ids <- page %>% html_elements('div') %>% html_attr('id')
     ids <- ids[!ids %>% is.na()]
 
     contracts <- ids[ids %>% str_detect("contracts")]
@@ -114,12 +114,12 @@
     }
 
     table <-
-      table %>%
-      flatten_df() %>%
+      table[[1]] %>%
+      as_tibble() %>%
       dplyr::rename(nameTeam = Team) %>%
-      gather(slugSeason, amountSalary, -nameTeam) %>%
+      pivot_longer(cols = -nameTeam, names_to = "slugSeason", values_to = "amountSalary") %>%
       mutate(amountSalary = amountSalary %>% as.character() %>%  parse_number())
-    contract_details <- page %>% html_nodes(".bullets") %>% html_text()
+    contract_details <- page %>% html_elements(".bullets") %>% html_text()
     if (contract_details %>% length() > 0) {
       table <-
         table %>%
@@ -134,7 +134,7 @@
   function(page) {
     bio <-
       page %>%
-      html_nodes(".media-item+ div p")
+      html_elements(".media-item+ div p")
 
     if (bio %>% length() == 0) {
       return(invisible())
@@ -302,8 +302,8 @@
       all_data %>%
       mutate(nameActual = actual_names) %>%
       select(nameActual, value) %>%
-      spread(nameActual, value) %>%
-      dplyr::select(one_of(actual_names))
+      pivot_wider(names_from = nameActual, values_from = value) %>%
+      dplyr::select(any_of(actual_names))
 
     if (all_data %>% has_name("heightInches")) {
       all_data <-
@@ -350,8 +350,7 @@
 
         all_data %>%
         separate(locationBirthplace, into = c("cityBirthplace", "stateBirthplace"), sep = "\\,") %>%
-        mutate_if(is.character,
-                  str_trim) %>%
+        mutate(across(where(is.character), str_trim)) %>%
         mutate(stateBirthplace = stateBirthplace %>% str_replace_all("$us", "")) %>%
         unite(locationBirthplace, cityBirthplace, stateBirthplace, sep = "\\, ", remove = F)
 
@@ -365,8 +364,7 @@
           into = c("ciyHighSchool", "stateHighSchool"),
           sep = "\\,"
         ) %>%
-        mutate_if(is.character,
-                  str_trim) %>%
+        mutate(across(where(is.character), str_trim)) %>%
         unite(
           locationHighSchool,
           ciyHighSchool,
@@ -385,8 +383,8 @@
           into = c("yearHighSchool", "rankHighSchool"),
           sep = "\\ "
         ) %>%
-        mutate_at(c("yearHighSchool", "rankHighSchool"),
-                  funs(. %>% as.character() %>% parse_number()))
+        mutate(across(c("yearHighSchool", "rankHighSchool"),
+                      ~ as.character(.x) %>% parse_number()))
 
     }
 
@@ -401,7 +399,7 @@
   function(page) {
     transactions <-
       page %>%
-      html_nodes("#div_transactions .transaction") %>%
+      html_elements("#div_transactions .transaction") %>%
       html_text()
 
     if (transactions %>% length() == 0) {
@@ -437,13 +435,13 @@
 
   image <-
     page %>%
-    html_nodes("#meta img")
+    html_elements("#meta img")
 
   parts <- url %>% str_split("/") %>% flatten_chr()
 
   id_bref <- parts[length(parts)] %>% str_replace_all("\\.html", "")
 
-  player <- page %>% html_nodes("h1") %>% html_text() %>% .[[1]]
+  player <- page %>% html_elements("h1") %>% html_text() %>% .[[1]]
 
   if (return_message) {
     glue("Parsing basketball reference biography data for {player}") %>% cat(fill = T)
@@ -494,7 +492,7 @@
                   dataTable)
 
   if (image %>% length() > 0) {
-    urlPlayerImageBREF <- page %>% html_nodes("#meta img") %>% html_attr("src")
+    urlPlayerImageBREF <- page %>% html_elements("#meta img") %>% html_attr("src")
     data <-
       data %>%
       mutate(urlPlayerImageBREF) %>%
@@ -545,15 +543,29 @@ bref_bios <-
            player_ids = NULL,
            assign_to_environment = TRUE,
            return_message = T) {
-    ids <-
-      .get_bref_players_ids(players = players, player_ids = player_ids)
 
-    df_bref_player_dict <-  dictionary_bref_players()
+    # If player_ids provided directly, build URLs without dictionary
+    if (!is.null(player_ids) && is.null(players)) {
+      ids <- player_ids
+      # Build URLs directly from player_ids
+      urls <- ids %>%
+        map_chr(function(id) {
+          letter <- substr(id, 1, 1)
+          glue("https://www.basketball-reference.com/players/{letter}/{id}.html") %>%
+            as.character()
+        })
+    } else {
+      # Need to use dictionary for player name lookup
+      ids <-
+        .get_bref_players_ids(players = players, player_ids = player_ids)
 
-    urls <-
-      df_bref_player_dict %>%
-      filter(slugPlayerBREF %in% ids) %>%
-      pull(urlPlayerBioBREF)
+      df_bref_player_dict <- dictionary_bref_players()
+
+      urls <-
+        df_bref_player_dict %>%
+        filter(slugPlayerBREF %in% ids) %>%
+        pull(urlPlayerBioBREF)
+    }
 
     .parse_bref_player_data_urls_safe <-
       possibly(.parse_bref_player_data_urls, tibble())
@@ -569,7 +581,7 @@ bref_bios <-
             all_data %>%
             filter(nameTable == table) %>%
             select(-nameTable) %>%
-            unnest()
+            unnest(cols = c(dataTable))
 
           table_name <-
             glue("dataBREFPlayers{table}") %>% as.character()

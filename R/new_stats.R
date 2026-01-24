@@ -18196,7 +18196,7 @@ nbastats_api_parameters <-
   function(json) {
     df_players <-
       json$data$players %>%
-      dplyr::as_tibble() %>%
+      dplyr::as_tibble(.name_repair = "unique") %>%
       set_names(
         c(
           "idPlayer",
@@ -18208,7 +18208,7 @@ nbastats_api_parameters <-
           "hasGamesPlayedFlag"
         )
       ) %>%
-      mutate_at(
+      mutate(across(
         c(
           "idPlayer",
           "isActive",
@@ -18216,8 +18216,8 @@ nbastats_api_parameters <-
           "yearSeasonLast",
           "yearSeasonFirst"
         ),
-        funs(. %>% as.integer())
-      ) %>%
+        as.integer
+      )) %>%
       mutate(
         isActive = as.logical(isActive),
         countSeasons = (yearSeasonLast - yearSeasonFirst)
@@ -18290,7 +18290,7 @@ parse_for_seasons_data <-
 
         values <-
           row[1:5] %>%
-          purrr::flatten_chr()
+          as.character()
 
         items <-
           c(
@@ -18303,13 +18303,12 @@ parse_for_seasons_data <-
 
         tibble(items, values) %>%
           mutate(values = values %>% as.character()) %>%
-          spread(items, values)
+          pivot_wider(names_from = items, values_from = values)
       })
 
     seasons %>%
-      mutate_all(as.character) %>%
-      mutate_at(c("yearDataEnd", "idLeagueSeasonType", "yearDataStart"),
-                funs(. %>% as.numeric()))
+      mutate(across(everything(), as.character)) %>%
+      mutate(across(c("yearDataEnd", "idLeagueSeasonType", "yearDataStart"), as.numeric))
   }
 
 .parse_for_teams <-
@@ -18333,10 +18332,10 @@ parse_for_seasons_data <-
           str_c("V", seq_along(values))
 
         tibble(items, values) %>%
-          spread(items, values)
+          pivot_wider(names_from = items, values_from = values)
 
       }) %>%
-      dplyr::select(one_of(
+      dplyr::select(any_of(
         c("V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10",
           "V11")
       )) %>%
@@ -18355,7 +18354,7 @@ parse_for_seasons_data <-
           "colorsTeam"
         )
       ) %>%
-      mutate_at(
+      mutate(across(
         c(
           "idTeam",
           "idConference",
@@ -18364,11 +18363,10 @@ parse_for_seasons_data <-
           "yearPlayedLast",
           "idLeague"
         ),
-        funs(. %>% as.integer())
-      ) %>%
+        as.integer
+      )) %>%
       mutate(nameTeam = str_c(cityTeam, teamNameFull, sep = " ")) %>%
-      mutate_if(is.character,
-                funs(ifelse(. == "", NA, .))) %>%
+      mutate(across(where(is.character), ~ ifelse(.x == "", NA, .x))) %>%
       dplyr::select(nameTeam, everything())
 
     df_teams <-
@@ -18514,7 +18512,7 @@ nba_players <-
       data %>% substr(18,nchar(data)-1) %>% fromJSON(simplifyDataFrame = T)
 
     data <-
-      json_data$data$players %>% as_tibble() %>%
+      json_data$data$players %>% as_tibble(.name_repair = "unique") %>%
       setNames(
         c(
           "idPlayer",
@@ -18529,7 +18527,7 @@ nba_players <-
 
     df_players <-
       data %>%
-      mutate_at(
+      mutate(across(
         c(
           "idPlayer",
           "isActive",
@@ -18538,7 +18536,7 @@ nba_players <-
           "idTeam"
         ),
         as.numeric
-      ) %>%
+      )) %>%
       mutate(
         hasGamesPlayedFlag = hasGamesPlayedFlag == "Y",
         isActive = as.logical(isActive),
