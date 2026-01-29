@@ -142,7 +142,7 @@ days_scores <-
 
     all_data <-
       1:nrow(input_df) %>%
-      purrr::map_dfr(seq_len(tables), function(x) {
+      future_map_dfr(function(x) {
         df_row <- input_df %>% slice(x)
         df_row %$%
           .get_day_nba_scores_safe(
@@ -159,7 +159,7 @@ days_scores <-
 
     all_data <-
       tables %>%
-      purrr::map_dfr(seq_len(tables), function(table) {
+      future_map_dfr(function(table) {
         df_row <-
           all_data %>%
           filter(nameTable == table) %>%
